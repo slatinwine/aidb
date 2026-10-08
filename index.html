@@ -590,6 +590,27 @@ async function pingServer(){
     $('srv-connect').disabled = false;
     $('srv-hint').textContent = '服务正常，可直接连接。';
   } catch (e){
+    // 静态托管场景（如 GitHub Pages）：自动探测本机 server.py（回环地址豁免混合内容限制）
+    const loop = 'http://127.0.0.1:8788';
+    if (base !== loop){
+      try {
+        const ctrl2 = new AbortController();
+        const t2 = setTimeout(() => ctrl2.abort(), 1500);
+        const res2 = await fetch(loop + '/api/ping', { signal: ctrl2.signal });
+        clearTimeout(t2);
+        const d2 = await res2.json();
+        if (d2.ok){
+          App.serverOk = true; App.serverBase = loop;
+          $('srv-base').value = loop;
+          st.textContent = '在线(本机) · sqlite' + (d2.mysql ? ' +mysql' : '') + (d2.pg ? ' +pg' : '') + (d2.mssql ? ' +mssql' : '');
+          st.className = 'badge on';
+          $('srv-connect').disabled = false;
+          $('srv-hint').textContent = '已自动发现本机 server.py，可直接连接。';
+          updateStatus();
+          return;
+        }
+      } catch (e2){ /* 本机也没有服务，按离线处理 */ }
+    }
     App.serverOk = false;
     st.textContent = '离线'; st.className = 'badge off';
     $('srv-connect').disabled = true;
