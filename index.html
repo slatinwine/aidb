@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIDB · 清水混凝土数据库工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23b3b0aa'/%3E%3Crect x='4' y='4' width='24' height='24' fill='none' stroke='%235a5852'/%3E%3Crect x='8' y='8' width='16' height='16' fill='%2396482a'/%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;border-radius:0}
+[hidden]{display:none!important}
+:root{
+  --bg:#a9a6a0; --panel:#c1beb8; --panel-2:#cbc8c2; --well:#b3b0aa; --well-2:#aca9a3;
+  --ink:#2c2b28; --ink-soft:#54524d; --line:#5a5852; --line-soft:rgba(60,58,54,.28);
+  --accent:#96482a; --accent-ink:#7c3a20; --moss:#5a6b4c;
+  --text:#33322f; --paper:#d6d3cd;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,"Courier New",monospace;
+}
+html,body{height:100%}
+body{
+  font-family:"Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;
+  font-size:13px;color:var(--text);background-color:var(--bg);
+  background-image:
+    radial-gradient(1200px 620px at 18% 0%, rgba(255,255,255,.15), transparent 60%),
+    radial-gradient(900px 520px at 88% 100%, rgba(0,0,0,.12), transparent 55%),
+    repeating-linear-gradient(180deg, transparent 0 158px, rgba(0,0,0,.06) 158px 160px),
+    repeating-linear-gradient(90deg, transparent 0 517px, rgba(0,0,0,.035) 517px 519px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+  display:flex;flex-direction:column;overflow:hidden;
+}
+/* ---------- 顶梁 ---------- */
+#topbar{
+  margin:12px 14px 10px;padding:10px 18px;display:flex;align-items:center;gap:18px;min-height:52px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-block{width:22px;height:22px;background:var(--accent);flex:0 0 auto;
+  box-shadow:inset -4px -4px 0 rgba(0,0,0,.22), inset 3px 3px 0 rgba(255,255,255,.16), 1px 2px 4px rgba(0,0,0,.3)}
+.brand h1{font-size:16px;letter-spacing:.42em;color:var(--ink);font-weight:700;white-space:nowrap}
+.brand-sub{font-size:10px;color:var(--ink-soft);letter-spacing:.34em;white-space:nowrap;padding-top:3px}
+#global-status{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.05em;text-align:right}
+.top-actions{display:flex;gap:8px}
+/* ---------- 混凝土面板 ---------- */
+.panel{
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid rgba(50,48,44,.45);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38), inset 0 -1px 0 rgba(0,0,0,.10), 2px 3px 10px rgba(0,0,0,.15);
+  position:relative;
+}
+.panel.ties::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(circle at 12px 12px, rgba(40,38,35,.34) 0 2.4px, transparent 3.4px),
+    radial-gradient(circle at calc(100% - 12px) 12px, rgba(40,38,35,.34) 0 2.4px, transparent 3.4px),
+    radial-gradient(circle at 12px calc(100% - 12px), rgba(40,38,35,.34) 0 2.4px, transparent 3.4px),
+    radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), rgba(40,38,35,.34) 0 2.4px, transparent 3.4px);
+}
+.panel-title{
+  font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--ink);font-weight:700;
+  padding:11px 14px 9px;border-bottom:1px solid var(--line-soft);
+  display:flex;align-items:center;gap:9px;
+}
+.panel-title::before{content:"";width:9px;height:9px;background:var(--accent);flex:0 0 auto;
+  box-shadow:inset -2px -2px 0 rgba(0,0,0,.2)}
+.panel-title .en{color:rgba(60,58,54,.42);letter-spacing:.22em;font-size:9px;font-weight:600}
+.panel-title .count{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-soft);letter-spacing:.05em}
+/* ---------- 布局 ---------- */
+#main{flex:1;display:flex;gap:12px;padding:0 14px 12px;min-height:0}
+#sidebar{width:284px;flex:0 0 auto;display:flex;flex-direction:column;gap:12px;min-height:0}
+#panel-source{flex:0 0 auto}
+#panel-tables{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#content{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.src-body{padding:4px 14px 14px}
+.rule{border-top:1px solid var(--line-soft);margin:12px -14px;box-shadow:0 1px 0 rgba(255,255,255,.25)}
+.stencil{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-top:12px}
+.stencil .en{color:rgba(60,58,54,.4);font-size:8.5px}
+.hint{font-size:11px;color:rgba(60,58,54,.6);margin-top:8px;line-height:1.5;letter-spacing:.02em}
+.row{display:flex;align-items:center;gap:8px;margin-top:8px}
+/* ---------- 控件 ---------- */
+.btn{
+  appearance:none;border:1px solid var(--line);cursor:pointer;color:var(--ink);
+  background:linear-gradient(180deg,#cecbc5,#bdbab4);
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;
+  padding:7px 13px;font-family:inherit;white-space:nowrap;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 1px 2px rgba(0,0,0,.2);
+  transition:background .12s;
+}
+.btn:hover:not(:disabled){background:linear-gradient(180deg,#c4c1bb,#b2afa9)}
+.btn:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 1px 3px rgba(0,0,0,.25)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.primary{background:linear-gradient(180deg,#3c3a36,#2c2b28);color:#d8d5cf;border-color:#1d1c1a}
+.btn.primary:hover:not(:disabled){background:#45433e}
+.btn.danger{color:var(--accent-ink);border-color:#6d3520}
+.btn.danger:hover:not(:disabled){background:#b99f92}
+.btn.sm{padding:4px 9px;font-size:10px}
+.btn.wide{display:block;width:100%;text-align:center;margin-top:8px}
+.btn.ghost{background:transparent;box-shadow:none}
+.btn.ghost:hover:not(:disabled){background:rgba(0,0,0,.06)}
+input,select,textarea{
+  font-family:inherit;font-size:12px;color:var(--ink);width:100%;
+  background:var(--well);border:1px solid #6e6b65;padding:6px 8px;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.15);
+}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(150,72,42,.55);outline-offset:0}
+input::placeholder,textarea::placeholder{color:rgba(60,58,54,.45)}
+.fld{display:block;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-top:9px}
+.fld input,.fld select{margin-top:4px;letter-spacing:normal;text-transform:none;font-weight:400}
+.badge{font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:3px 8px;border:1px solid var(--line-soft);color:var(--ink-soft);background:rgba(0,0,0,.05)}
+.badge.on{border-color:#4c5a41;color:#41502f;background:rgba(90,107,76,.15)}
+.badge.off{color:#6d3520;border-color:rgba(109,53,32,.5)}
+.badge.warn{color:#7a5b1e;border-color:rgba(122,91,30,.5)}
+/* ---------- 表列表 ---------- */
+#table-list{list-style:none;overflow:auto;flex:1;padding:5px 0;min-height:0}
+#table-list li{padding:7px 14px 7px 12px;cursor:pointer;display:flex;align-items:center;gap:9px;border-left:3px solid transparent;font-size:13px}
+#table-list li::before{content:"";width:8px;height:8px;background:rgba(60,58,54,.38);flex:0 0 auto}
+#table-list li.view::before{background:transparent;border:1px solid rgba(60,58,54,.45)}
+#table-list li:hover{background:rgba(0,0,0,.055)}
+#table-list li.active{border-left-color:var(--accent);background:rgba(0,0,0,.08);font-weight:600}
+#table-list li .tname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#table-list li .tview{margin-left:auto;font-size:8.5px;letter-spacing:.16em;color:rgba(60,58,54,.5);border:1px solid rgba(60,58,54,.35);padding:1px 4px;text-transform:uppercase;flex:0 0 auto}
+/* ---------- 页签与工具条 ---------- */
+#tabs{display:flex;align-items:stretch;gap:2px;margin-bottom:10px;flex-wrap:wrap;row-gap:8px}
+.tab{
+  border:1px solid var(--line);border-bottom:none;background:rgba(190,187,181,.55);
+  padding:8px 18px;font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;
+  cursor:pointer;color:var(--ink-soft);font-weight:700;font-family:inherit;
+}
+.tab:hover{background:rgba(190,187,181,.85)}
+.tab.active{background:var(--panel-2);color:var(--ink);
+  box-shadow:inset 0 3px 0 var(--accent), inset 0 1px 0 rgba(255,255,255,.4)}
+#table-toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;padding:2px 0 2px 10px}
+#cur-table{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+#where-input{width:220px;font-family:var(--mono);font-size:11px}
+#page-size{width:auto}
+#page-label{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);white-space:nowrap}
+/* ---------- 数据网格 ---------- */
+#view-data{flex:1;display:flex;min-height:0;position:relative}
+#grid-wrap{
+  flex:1;overflow:auto;background:var(--well-2);min-height:0;
+  border:1px solid rgba(50,48,44,.4);
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.13), inset 0 1px 0 rgba(255,255,255,.2);
+}
+#grid{border-collapse:collapse;width:100%;font-size:12.5px}
+#grid th{
+  position:sticky;top:0;z-index:2;text-align:left;user-select:none;cursor:pointer;white-space:nowrap;
+  background:linear-gradient(180deg,#cbc8c2,#bcb9b3);
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);font-weight:700;
+  padding:8px 11px;border-bottom:2px solid var(--line);border-right:1px solid var(--line-soft);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4);
+}
+#grid th:hover{background:#c2bfb9}
+#grid td{
+  padding:6px 11px;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  border-bottom:1px solid rgba(60,58,54,.14);border-right:1px solid rgba(60,58,54,.10);
+  background:rgba(214,211,205,.32);font-variant-numeric:tabular-nums;
+}
+#grid tbody tr:hover td{background:rgba(0,0,0,.055)}
+#grid tbody tr.selected td{background:rgba(150,72,42,.16)}
+th.rid,td.rid{color:rgba(60,58,54,.48);font-size:10px;width:46px;min-width:46px;text-align:right;background:transparent!important;cursor:default;font-family:var(--mono)}
+td.nullcell{color:rgba(60,58,54,.4);font-style:italic}
+td.numcell{text-align:right;font-family:var(--mono);font-size:11.5px}
+td.blobcell{color:#6d3520;font-family:var(--mono);font-size:11px}
+td.editable{cursor:cell}
+td.editable:hover{outline:1px dashed rgba(150,72,42,.75);outline-offset:-1px}
+td.dirty{box-shadow:inset 3px 0 0 var(--accent)}
+.cell-edit{width:100%;height:100%;border:none;background:#e8e5df;margin:0;padding:3px 8px;
+  font-family:var(--mono);font-size:12px;box-shadow:none;outline:2px solid rgba(150,72,42,.7)!important}
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  color:rgba(60,58,54,.55);letter-spacing:.32em;text-transform:uppercase;font-size:11.5px;text-align:center;padding:20px}
+.empty .mark{font-size:58px;font-family:var(--mono);color:rgba(60,58,54,.3);letter-spacing:0}
+.empty .sub{letter-spacing:.1em;text-transform:none;font-size:12px;color:rgba(60,58,54,.5)}
+/* ---------- 结构视图 ---------- */
+#view-schema{flex:1;overflow:auto;min-height:0;padding:14px;
+  background:var(--well-2);border:1px solid rgba(50,48,44,.4);box-shadow:inset 0 2px 8px rgba(0,0,0,.13)}
+#view-schema h3{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-soft);margin:16px 0 8px}
+#view-schema h3:first-child{margin-top:0}
+.rset-cap{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin:4px 0 7px}
+.rtable{border-collapse:collapse;background:rgba(214,211,205,.4);font-size:12px;margin-bottom:16px}
+.rtable th{background:#bdbab4;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;
+  border:1px solid var(--line-soft);border-bottom:2px solid var(--line);text-align:left;color:var(--ink);font-weight:700}
+.rtable td{padding:5px 12px;border:1px solid rgba(60,58,54,.16);max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ddl{font-family:var(--mono);font-size:12px;line-height:1.6;background:#b0ada7;border:1px solid #6e6b65;
+  padding:14px;white-space:pre-wrap;word-break:break-all;box-shadow:inset 0 2px 5px rgba(0,0,0,.15)}
+/* ---------- SQL 控制台 ---------- */
+#view-sql{flex:1;display:flex;flex-direction:column;min-height:0;gap:10px}
+.sql-editor{flex:0 0 31%;display:flex;flex-direction:column;min-height:130px}
+#sql-input{flex:1;resize:none;font-family:var(--mono);font-size:13px;line-height:1.6;padding:13px;background:#aeaba5;min-height:0}
+.sql-bar{display:flex;align-items:center;gap:10px;margin-top:8px}
+#sql-history{width:260px;font-family:var(--mono);font-size:11px}
+#sql-status{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:auto;letter-spacing:.04em}
+#sql-results{flex:1;overflow:auto;min-height:0;padding:12px 14px;
+  background:var(--well-2);border:1px solid rgba(50,48,44,.4);box-shadow:inset 0 2px 8px rgba(0,0,0,.13)}
+.rtable-wrap{overflow:auto;margin-bottom:16px;border:1px solid var(--line-soft)}
+.sql-msg{font-family:var(--mono);font-size:12px;color:#41502f;padding:4px 0}
+.sql-msg.err{color:var(--accent-ink)}
+.trunc{font-size:10.5px;color:rgba(60,58,54,.55);margin:2px 0 10px;font-family:var(--mono)}
+.gate{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;cursor:pointer;user-select:none}
+.gate input{width:13px;height:13px;box-shadow:none;accent-color:var(--accent);cursor:pointer}
+.danger-warn{font-size:12.5px;line-height:1.7;margin-bottom:4px}
+.danger-item{margin:10px 0;padding:10px 12px;background:rgba(150,72,42,.10);border:1px solid rgba(150,72,42,.4);border-left:4px solid var(--accent)}
+.danger-tag{display:inline-block;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#f0ece5;background:var(--accent);padding:2px 7px;margin-bottom:7px;font-weight:700}
+.danger-item code{font-family:var(--mono);font-size:11.5px;word-break:break-all;display:block;line-height:1.5;white-space:pre-wrap;color:var(--ink)}
+.danger-input-row{margin-top:4px}
+/* ---------- 状态条 ---------- */
+#statusbar{
+  flex:0 0 30px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 16px;
+  background:rgba(40,39,36,.94);color:#b5b2ac;border-top:2px solid #1d1c1a;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;white-space:nowrap;overflow:hidden;
+}
+#st-mid.warn{color:#d8a184}
+/* ---------- 弹层 ---------- */
+#modal-root{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(38,37,34,.58);z-index:90}
+#modal-root.open{display:flex}
+.modal{width:540px;max-width:92vw;max-height:84vh;display:flex;flex-direction:column}
+.modal-head{padding:13px 18px;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.modal-head h3{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink)}
+.modal-body{padding:14px 18px;overflow:auto}
+.modal-body p{font-size:13px;line-height:1.6}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--line-soft);display:flex;justify-content:flex-end;gap:8px}
+/* ---------- 拖放 / 提示 ---------- */
+#drop-overlay{position:fixed;inset:0;background:rgba(38,37,34,.62);z-index:200;display:none;align-items:center;justify-content:center}
+#drop-overlay.on{display:flex}
+.drop-box{border:2px dashed rgba(214,211,205,.75);color:#d6d3cd;padding:54px 78px;
+  font-size:14px;letter-spacing:.42em;text-transform:uppercase;background:rgba(60,58,54,.4)}
+#toasts{position:fixed;right:16px;bottom:42px;display:flex;flex-direction:column;gap:8px;z-index:100}
+.toast{background:var(--ink);color:#cfccc6;padding:10px 15px;font-size:12px;border-left:4px solid var(--moss);
+  box-shadow:0 6px 18px rgba(0,0,0,.35);max-width:400px;animation:tin .18s ease-out;line-height:1.5}
+.toast.err{border-left-color:var(--accent)}
+.toast.info{border-left-color:#8a8781}
+@keyframes tin{from{transform:translateY(8px);opacity:0}}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-thumb{background:rgba(70,68,64,.5);border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background-color:rgba(70,68,64,.75)}
+::-webkit-scrollbar-track{background:rgba(0,0,0,.06)}
+::-webkit-scrollbar-corner{background:rgba(0,0,0,.06)}
+</style>
+</head>
+<body>
+
+<header id="topbar" class="panel">
+  <div class="brand">
+    <span class="brand-block"></span>
+      <h1>AIDB</h1>
+      <span class="brand-sub">清水混凝土 · 数据库工作台</span>
+  </div>
+  <div id="global-status"></div>
+  <div class="top-actions">
+    <button id="btn-export-db" class="btn" disabled title="把当前内存中的数据库（含未保存修改）导出为 .db 文件 (Ctrl+S)">导出 .DB</button>
+    <button id="btn-export-csv" class="btn" disabled>导出 CSV</button>
+  </div>
+</header>
+
+<div id="main">
+  <aside id="sidebar">
+    <section class="panel ties" id="panel-source">
+      <h2 class="panel-title">数据源 <span class="en">SOURCE</span></h2>
+      <div class="src-body">
+        <button id="btn-open-file" class="btn wide" style="margin-top:6px">打开 .DB / .SQLITE 文件</button>
+        <button id="btn-new-db" class="btn wide ghost">新建内存数据库</button>
+        <button id="btn-load-demo" class="btn wide ghost" title="从当前网站下载 demo.db 加载（GitHub Pages 上可一键体验）">加载示例数据库</button>
+        <input type="file" id="file-input" accept=".db,.sqlite,.sqlite3,.db3" hidden>
+        <p class="hint">或将文件拖入窗口任意位置。本地编辑保存在内存中，Ctrl+S 导出。</p>
+        <div class="rule"></div>
+        <h3 class="stencil">服务器连接 <span class="en">SERVER · MYSQL / PG / SQLITE</span></h3>
+        <label class="fld">服务地址
+          <input id="srv-base" value="http://127.0.0.1:8788" spellcheck="false">
+        </label>
+        <div class="row">
+          <button id="srv-ping" class="btn sm">检测</button>
+          <span id="srv-state" class="badge off">未检测</span>
+        </div>
+        <label class="fld">数据库类型
+          <select id="srv-type">
+            <option value="sqlite">SQLite（服务器上的文件）</option>
+            <option value="mysql">MySQL</option>
+            <option value="postgres">PostgreSQL</option>
+            <option value="mssql">SQL Server</option>
+          </select>
+        </label>
+        <div id="srv-fields-sqlite">
+          <label class="fld">数据库文件路径（服务器本地）
+            <input id="srv-path" placeholder="C:/data/app.db" spellcheck="false">
+          </label>
+        </div>
+        <div id="srv-fields-net" hidden>
+          <div style="display:flex;gap:8px">
+            <label class="fld" style="flex:2">主机 <input id="srv-host" value="127.0.0.1" spellcheck="false"></label>
+            <label class="fld" style="flex:1">端口 <input id="srv-port" value="3306" spellcheck="false"></label>
+          </div>
+          <div style="display:flex;gap:8px">
+            <label class="fld" style="flex:1">用户 <input id="srv-user" placeholder="root" spellcheck="false"></label>
+            <label class="fld" style="flex:1">密码 <input id="srv-pass" type="password"></label>
+          </div>
+          <label class="fld">数据库 <input id="srv-db" placeholder="database" spellcheck="false"></label>
+        </div>
+        <button id="srv-connect" class="btn wide primary" disabled>连接</button>
+        <button id="srv-disconnect" class="btn wide ghost" hidden>断开服务器连接</button>
+        <p class="hint" id="srv-hint">需在旁边运行 <code>python server.py</code>（见 README）</p>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-tables">
+      <h2 class="panel-title">表 <span class="en">TABLES</span> <span class="count" id="table-count"></span></h2>
+      <ul id="table-list"></ul>
+    </section>
+  </aside>
+
+  <section id="content">
+    <nav id="tabs">
+      <button class="tab active" data-tab="data">数据</button>
+      <button class="tab" data-tab="schema">结构</button>
+      <button class="tab" data-tab="sql">SQL</button>
+      <div id="table-toolbar" hidden>
+        <span id="cur-table"></span>
+        <input id="where-input" placeholder="WHERE 子句（可选）· 回车应用" spellcheck="false" title="追加到查询的原始 SQL 条件，例如: age > 18 AND city LIKE '%京%'">
+        <select id="page-size" title="每页行数">
+          <option>20</option><option selected>50</option><option>100</option><option>200</option>
+        </select>
+        <button id="btn-prev" class="btn sm">‹</button>
+        <span id="page-label"></span>
+        <button id="btn-next" class="btn sm">›</button>
+        <button id="btn-add-row" class="btn sm">＋ 行</button>
+        <button id="btn-del-row" class="btn sm danger">－ 行</button>
+      </div>
+    </nav>
+
+    <div id="view-data">
+      <div id="grid-wrap" hidden><table id="grid"></table></div>
+      <div id="empty-state" class="empty">
+        <span class="mark">∅</span>
+        <span id="empty-msg">未连接数据库</span>
+        <span class="sub">打开 .db 文件 · 新建内存库 · 或连接服务器</span>
+      </div>
+    </div>
+
+    <div id="view-schema" hidden>
+      <div id="schema-empty" class="empty" style="position:static;height:200px">
+        <span class="mark">∅</span><span>未选择表</span>
+      </div>
+      <div id="schema-body"></div>
+    </div>
+
+    <div id="view-sql" hidden>
+      <div class="sql-editor">
+        <textarea id="sql-input" spellcheck="false" placeholder="-- SQL 控制台 · Ctrl+Enter 执行
+SELECT * FROM students WHERE age > 18;"></textarea>
+        <div class="sql-bar">
+          <select id="sql-history"><option value="">历史…</option></select>
+          <label class="gate" title="执行 DROP / TRUNCATE / 无 WHERE 的 DELETE·UPDATE 前弹出确认"><input type="checkbox" id="danger-gate" checked> 危险操作确认</label>
+          <button id="btn-run" class="btn primary">执行 ▶</button>
+          <span id="sql-status"></span>
+        </div>
+      </div>
+      <div id="sql-results">
+        <div class="sql-msg" style="color:rgba(60,58,54,.5)">— 尚无结果 —</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer id="statusbar">
+  <span id="st-left">未连接</span>
+  <span id="st-mid"></span>
+  <span id="st-right"></span>
+</footer>
+
+<div id="drop-overlay"><div class="drop-box">放下 .DB / .SQLITE 文件</div></div>
+<div id="modal-root"></div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const App = {
+  SQL: null, mode: null,            // 'local' | 'server'
+  db: null, dbName: '',
+  connId: null, dialect: 'sqlite', serverBase: '', serverOk: false,
+  tables: [], table: null, tableType: 'table',
+  columns: [], rowid: false, pkNames: [], editStrategy: null,
+  where: '', sort: null, page: 0, pageSize: 50, total: 0,
+  dirty: 0, selectedTr: null,
+};
+
+/* ============ 基础工具 ============ */
+function toast(msg, type){
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || 'info');
+  t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 3200);
+  setTimeout(() => t.remove(), 3600);
+}
+function qid(name){
+  if (App.mode === 'server' && App.dialect === 'mssql')
+    return '[' + String(name).replace(/]/g, ']]') + ']';
+  if (App.mode === 'server' && App.dialect === 'mysql')
+    return '`' + String(name).replace(/`/g, '``') + '`';
+  return '"' + String(name).replace(/"/g, '""') + '"';
+}
+function coerce(s){
+  const t = String(s).trim();
+  if (t === '') return null;
+  if (/^-?\d+$/.test(t) && t.length < 16) return parseInt(t, 10);
+  if (/^-?(\d+\.\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)) return parseFloat(t);
+  return s;
+}
+function cellText(v){
+  if (v === null || v === undefined) return null;
+  if (v instanceof Uint8Array) return 'BLOB<' + v.length + 'B>';
+  return String(v);
+}
+function stem(name){ return String(name || 'database').replace(/\.(db|sqlite3?|db3)$/i, ''); }
+function downloadBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function api(method, path, body){
+  const base = App.serverBase.replace(/\/+$/, '');
+  const opt = { method, headers: {} };
+  if (body !== undefined){ opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  let res;
+  try { res = await fetch(base + path, opt); }
+  catch (e){ throw new Error('无法访问服务器 ' + base + '（server.py 未运行？）'); }
+  let data = null;
+  try { data = await res.json(); } catch (e){}
+  if (!res.ok || (data && data.error)) throw new Error((data && data.error) || ('HTTP ' + res.status));
+  return data;
+}
+
+/* ============ SQL 引擎加载 ============ */
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error('load fail: ' + src));
+    document.head.appendChild(s);
+  });
+}
+let enginePromise = null;
+function ensureEngine(){
+  if (!enginePromise) enginePromise = (async () => {
+    try { await loadScript('sqljs/wasm-b64.js'); } catch (e){}
+    let base = 'sqljs/';
+    if (!window.initSqlJs){
+      try { await loadScript(base + 'sql-wasm.js'); }
+      catch (e){
+        base = 'https://cdn.jsdelivr.net/npm/sql.js@1.13.0/dist/';
+        await loadScript(base + 'sql-wasm.js');
+      }
+    }
+    const cfg = {};
+    if (window.SQL_WASM_BINARY){
+      const bin = atob(window.SQL_WASM_BINARY);
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      cfg.wasmBinary = u8;
+    } else {
+      cfg.locateFile = f => base + f;
+    }
+    App.SQL = await window.initSqlJs(cfg);
+  })();
+  return enginePromise;
+}
+function q(sql, params){
+  const stmt = App.db.prepare(sql);
+  stmt.bind(params || []);
+  const columns = stmt.getColumnNames();
+  const rows = [];
+  while (stmt.step()) rows.push(stmt.get());
+  stmt.free();
+  return { columns, rows };
+}
+
+/* ============ 数据源切换 ============ */
+async function openLocalFile(file){
+  try { await ensureEngine(); } catch (e){ toast('SQL 引擎加载失败：' + e.message, 'err'); return; }
+  try {
+    const buf = await file.arrayBuffer();
+    const db = new App.SQL.Database(new Uint8Array(buf));
+    setLocal(file.name, db);
+    toast('已打开 ' + file.name, 'ok');
+  } catch (e){ toast('无法打开该文件：' + (e.message || e), 'err'); }
+}
+function newLocalDb(){
+  ensureEngine().then(() => {
+    const db = new App.SQL.Database();
+    db.run('CREATE TABLE IF NOT EXISTS _开始 (id INTEGER PRIMARY KEY AUTOINCREMENT, 说明 TEXT)');
+    db.run("INSERT INTO _开始 (说明) VALUES ('这是内存数据库：到 SQL 页创建表，Ctrl+S 导出 .db 保存'), ('数据页双击单元格即可编辑，点列头排序')");
+    setLocal('内存数据库', db);
+    toast('已新建内存数据库', 'ok');
+  }).catch(e => toast('SQL 引擎加载失败：' + e.message, 'err'));
+}
+async function loadDemoDb(){
+  try { await ensureEngine(); } catch (e){ toast('SQL 引擎加载失败：' + e.message, 'err'); return; }
+  try {
+    const res = await fetch('demo.db');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const buf = await res.arrayBuffer();
+    setLocal('demo.db', new App.SQL.Database(new Uint8Array(buf)));
+    toast('已加载示例数据库', 'ok');
+  } catch (e){
+    toast('无法在线加载示例（' + (e.message || e) + '）——请下载 demo.db 后用「打开文件」', 'err');
+  }
+}
+function setLocal(name, db){
+  App.mode = 'local'; App.db = db; App.dbName = name;
+  App.connId = null; App.dialect = 'sqlite';
+  App.table = null; App.dirty = 0; App.selectedTr = null;
+  $('srv-disconnect').hidden = true;
+  refreshTables().then(() => {
+    showTab('data');
+    renderEmpty('本地 SQLite · ' + name + ' — 从左侧选择一张表');
+    updateToolbar(); updateStatus();
+  });
+}
+async function connectServer(){
+  const type = $('srv-type').value;
+  const payload = { type };
+  if (type === 'sqlite'){
+    payload.path = $('srv-path').value.trim();
+    if (!payload.path){ toast('请填写数据库文件路径', 'err'); return; }
+  } else {
+    payload.host = $('srv-host').value.trim() || '127.0.0.1';
+    payload.port = parseInt($('srv-port').value, 10) || (type === 'mysql' ? 3306 : 5432);
+    payload.user = $('srv-user').value.trim() || (type === 'postgres' ? 'postgres' : type === 'mssql' ? 'sa' : 'root');
+    payload.password = $('srv-pass').value;
+    payload.database = $('srv-db').value.trim();
+    if (!payload.database){ toast('请填写数据库名', 'err'); return; }
+  }
+  saveSrvForm();
+  try {
+    const r = await api('POST', '/api/connect', payload);
+    App.connId = r.conn_id; App.dialect = r.dialect;
+    try { localStorage.setItem('aidb.conn', JSON.stringify({ conn_id: r.conn_id, dialect: r.dialect })); } catch (e){}
+    App.mode = 'server'; App.db = null; App.table = null; App.dirty = 0;
+    App.selectedTr = null;
+    $('srv-disconnect').hidden = false;
+    await refreshTables();
+    showTab('data');
+    renderEmpty('已连接 ' + App.dialect.toUpperCase() + ' — 从左侧选择一张表（改动直接写入数据库）');
+    updateToolbar(); updateStatus();
+    toast('已连接服务器（' + App.dialect + '）', 'ok');
+  } catch (e){ toast(e.message, 'err'); }
+}
+async function disconnectServer(){
+  if (App.connId){
+    try { await api('POST', '/api/disconnect', { conn: App.connId }); } catch (e){}
+  }
+  try { localStorage.removeItem('aidb.conn'); } catch (e){}
+  App.connId = null;
+  if (App.mode === 'server'){
+    App.mode = null; App.table = null; App.tables = [];
+    renderTableList(); renderEmpty('未连接数据库');
+    updateToolbar(); updateStatus();
+  }
+  $('srv-disconnect').hidden = true;
+  toast('已断开服务器连接', 'info');
+}
+async function tryResume(){
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('aidb.conn') || 'null'); } catch (e){}
+  if (!saved || !saved.conn_id) return;
+  try {
+    await api('GET', '/api/tables?conn=' + encodeURIComponent(saved.conn_id));
+    App.connId = saved.conn_id; App.dialect = saved.dialect;
+    App.mode = 'server'; App.table = null; App.dirty = 0;
+    App.selectedTr = null;
+    $('srv-disconnect').hidden = false;
+    await refreshTables();
+    showTab('data');
+    renderEmpty('连接已恢复 — 从左侧选择一张表');
+    updateStatus();
+    toast('已恢复上次的数据库连接', 'ok');
+  } catch (e){
+    try { localStorage.removeItem('aidb.conn'); } catch (e2){}
+  }
+}
+async function pingServer(){
+  const base = ($('srv-base').value || '').trim().replace(/\/+$/, '');
+  App.serverBase = base;
+  const st = $('srv-state');
+  st.textContent = '检测中…'; st.className = 'badge warn';
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 1800);
+    const res = await fetch(base + '/api/ping', { signal: ctrl.signal });
+    clearTimeout(timer);
+    const d = await res.json();
+    App.serverOk = !!d.ok;
+    st.textContent = '在线 · sqlite' + (d.mysql ? ' +mysql' : '') + (d.pg ? ' +pg' : '') + (d.mssql ? ' +mssql' : '');
+    st.className = 'badge on';
+    $('srv-connect').disabled = false;
+    $('srv-hint').textContent = '服务正常，可直接连接。';
+  } catch (e){
+    App.serverOk = false;
+    st.textContent = '离线'; st.className = 'badge off';
+    $('srv-connect').disabled = true;
+    $('srv-hint').textContent = '检测不到服务：先运行 python server.py';
+  }
+  updateStatus();
+}
+
+/* ============ 连接信息记忆（不含密码） ============ */
+function saveSrvForm(){
+  try {
+    localStorage.setItem('aidb.srv', JSON.stringify({
+      base: $('srv-base').value, type: $('srv-type').value,
+      path: $('srv-path').value, host: $('srv-host').value,
+      port: $('srv-port').value, user: $('srv-user').value, db: $('srv-db').value,
+    }));
+  } catch (e){}
+}
+function restoreSrvForm(){
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem('aidb.srv') || 'null'); } catch (e){}
+  if (!s) return;
+  if (s.base) $('srv-base').value = s.base;
+  if (s.type){ $('srv-type').value = s.type; $('srv-type').dispatchEvent(new Event('change')); }
+  if (s.path) $('srv-path').value = s.path;
+  if (s.host) $('srv-host').value = s.host;
+  if (s.port) $('srv-port').value = s.port;
+  if (s.user) $('srv-user').value = s.user;
+  if (s.db) $('srv-db').value = s.db;
+}
+
+/* ============ 表与数据 ============ */
+async function refreshTables(){
+  let tables = [];
+  try {
+    if (App.mode === 'local'){
+      const r = q("SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY (type='table') DESC, name");
+      tables = r.rows.map(v => ({ name: v[0], type: v[1] }));
+    } else if (App.mode === 'server'){
+      const r = await api('GET', '/api/tables?conn=' + encodeURIComponent(App.connId));
+      tables = r.tables;
+    }
+  } catch (e){ toast(e.message, 'err'); }
+  App.tables = tables;
+  renderTableList();
+}
+function renderTableList(){
+  const ul = $('table-list');
+  ul.innerHTML = '';
+  $('table-count').textContent = App.tables.length ? App.tables.length + ' 项' : '';
+  App.tables.forEach(t => {
+    const li = document.createElement('li');
+    if (t.type === 'view') li.classList.add('view');
+    if (t.name === App.table) li.classList.add('active');
+    const nm = document.createElement('span'); nm.className = 'tname'; nm.textContent = t.name; nm.title = t.name;
+    li.appendChild(nm);
+    if (t.type === 'view'){ const v = document.createElement('span'); v.className = 'tview'; v.textContent = 'VIEW'; li.appendChild(v); }
+    li.addEventListener('click', () => openTable(t.name, t.type));
+    ul.appendChild(li);
+  });
+}
+function canEdit(){
+  return !!App.table && App.tableType === 'table';
+}
+async function openTable(name, type){
+  App.table = name; App.tableType = type || 'table';
+  App.page = 0; App.sort = null; App.where = '';
+  $('where-input').value = '';
+  try {
+    if (App.mode === 'local'){
+      const info = q('PRAGMA table_info(' + qid(name) + ')');
+      App.columns = info.rows.map(v => ({ name: v[1], type: v[2] || '', notnull: !!v[3], pk: v[5] }));
+      let hasRowid = true;
+      try { q('SELECT rowid FROM ' + qid(name) + ' LIMIT 1'); } catch (e){ hasRowid = false; }
+      App.rowid = hasRowid && App.tableType === 'table' && !App.columns.some(c => c.name === '__rid__');
+      App.pkNames = [];
+    } else {
+      const d = await api('GET', '/api/describe?conn=' + encodeURIComponent(App.connId) + '&table=' + encodeURIComponent(name));
+      App.columns = d.columns;
+      App.pkNames = App.columns.filter(c => c.pk).map(c => c.name);
+      App.rowid = false;
+    }
+    App.editStrategy = App.mode === 'local' ? (App.rowid ? 'rowid' : 'allcols')
+                                            : (App.pkNames.length ? 'pk' : 'allcols');
+    App.selectedTr = null;
+    await loadPage();
+    showTab('data');
+  } catch (e){ toast(e.message, 'err'); }
+}
+async function loadPage(){
+  if (!App.table) return;
+  let columns, rows, total;
+  try {
+    if (App.mode === 'local'){
+      let sel = 'SELECT ' + (App.rowid ? 'rowid AS __rid__, ' : '') + '* FROM ' + qid(App.table);
+      let cnt = 'SELECT COUNT(*) FROM ' + qid(App.table);
+      if (App.where){ sel += ' WHERE ' + App.where; cnt += ' WHERE ' + App.where; }
+      if (App.sort) sel += ' ORDER BY ' + qid(App.sort.col) + ' ' + App.sort.dir;
+      sel += ' LIMIT ? OFFSET ?';
+      const r = q(sel, [App.pageSize, App.page * App.pageSize]);
+      const c = q(cnt);
+      columns = App.columns.map(x => x.name);
+      rows = r.rows; total = c.rows[0][0];
+    } else {
+      const p = new URLSearchParams({ conn: App.connId, table: App.table, limit: App.pageSize, offset: App.page * App.pageSize });
+      if (App.where) p.set('where', App.where);
+      if (App.sort){ p.set('sort', App.sort.col); p.set('dir', App.sort.dir); }
+      const r = await api('GET', '/api/rows?' + p);
+      columns = r.columns; rows = r.rows; total = r.total;
+    }
+  } catch (e){ toast(e.message, 'err'); return; }
+  App.total = total;
+  renderGrid(columns, rows);
+  updateToolbar(); updateStatus();
+}
+function renderGrid(columns, rows){
+  $('empty-state').hidden = true;
+  $('grid-wrap').hidden = false;
+  const grid = $('grid');
+  grid.innerHTML = '';
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.className = 'rid'; th0.textContent = '#';
+  hr.appendChild(th0);
+  columns.forEach(c => {
+    const th = document.createElement('th');
+    th.textContent = c + (App.sort && App.sort.col === c ? (App.sort.dir === 'ASC' ? ' ↑' : ' ↓') : '');
+    th.addEventListener('click', () => {
+      if (!App.sort || App.sort.col !== c) App.sort = { col: c, dir: 'ASC' };
+      else if (App.sort.dir === 'ASC') App.sort.dir = 'DESC';
+      else App.sort = null;
+      loadPage();
+    });
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  grid.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const editable = canEdit();
+  rows.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    let rid = null, vals = r;
+    if (App.mode === 'local' && App.rowid){ rid = r[0]; vals = r.slice(1); }
+    tr._rid = rid;
+    tr._raw = vals.slice();
+    const td0 = document.createElement('td');
+    td0.className = 'rid';
+    td0.textContent = String(App.page * App.pageSize + idx + 1);
+    tr.appendChild(td0);
+    vals.forEach((v, ci) => {
+      const td = document.createElement('td');
+      const col = App.columns[ci];
+      const txt = cellText(v);
+      if (txt === null){ td.classList.add('nullcell'); td.textContent = '∅'; td.title = 'NULL（双击编辑）'; }
+      else {
+        td.textContent = txt;
+        if (txt.length > 40) td.title = txt;
+        if (typeof v === 'number') td.classList.add('numcell');
+        if (v instanceof Uint8Array) td.classList.add('blobcell');
+      }
+      if (editable && col){
+        td.classList.add('editable');
+        td.addEventListener('dblclick', () => startEdit(td, ci, tr));
+      }
+      tr.appendChild(td);
+    });
+    tr.addEventListener('click', () => selectRow(tr));
+    tbody.appendChild(tr);
+  });
+  grid.appendChild(tbody);
+}
+function selectRow(tr){
+  const tbody = tr.parentElement;
+  tbody.querySelectorAll('tr.selected').forEach(x => x.classList.remove('selected'));
+  tr.classList.add('selected');
+  App.selectedTr = tr;
+  updateToolbar();
+}
+
+/* ============ 单元格编辑 ============ */
+function setCell(td, v){
+  const txt = cellText(v);
+  td.innerHTML = '';
+  if (txt === null){ td.classList.add('nullcell'); td.textContent = '∅'; }
+  else { td.classList.remove('nullcell'); td.textContent = txt; }
+}
+function startEdit(td, ci, tr){
+  if (td.querySelector('input')) return;
+  const col = App.columns[ci];
+  const raw = tr._raw[ci];
+  const wasNull = raw === null || raw === undefined;
+  const orig = wasNull ? null : raw;
+  td.classList.remove('nullcell');
+  td.innerHTML = '';
+  const inp = document.createElement('input');
+  inp.className = 'cell-edit';
+  inp.value = orig === null ? '' : (orig instanceof Uint8Array ? cellText(orig) : String(orig));
+  td.appendChild(inp);
+  inp.focus(); inp.select();
+  let done = false;
+  const cancel = () => { if (done) return; done = true; setCell(td, orig); };
+  const commit = async () => {
+    if (done) return;
+    const val = coerce(inp.value);
+    done = true;
+    setCell(td, val);
+    try {
+      await applyUpdate(col.name, val, tr);
+      td.classList.add('dirty');
+    } catch (e){ setCell(td, orig); toast(e.message || String(e), 'err'); }
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); commit(); }
+    else if (e.key === 'Escape'){ e.preventDefault(); cancel(); }
+  });
+  inp.addEventListener('blur', cancel);
+}
+/* 行定位策略：rowid（本地表）/ pk（主键，含复合主键）/ allcols（无主键整行 NULL 安全匹配） */
+function backendDialect(){ return App.mode === 'local' ? 'sqlite' : App.dialect; }
+function nullSafeCond(colName){
+  const d = backendDialect();
+  if (d === 'mysql') return qid(colName) + ' <=> ?';
+  if (d === 'pg') return qid(colName) + ' IS NOT DISTINCT FROM ?';
+  return qid(colName) + ' IS ?';
+}
+function buildEditConds(tr){
+  if (App.editStrategy === 'rowid') return { sql: 'rowid=?', params: [tr._rid] };
+  const d = backendDialect();
+  const cols = App.editStrategy === 'pk' ? App.columns.filter(c => c.pk) : App.columns;
+  const params = cols.map(c => tr._raw[App.columns.indexOf(c)]);
+  if (d === 'mssql'){
+    // SQL Server 没有 NULL 安全等号，用 INTERSECT 技巧（NULL 与 NULL 视为相等）
+    const names = cols.map(c => qid(c.name)).join(', ');
+    const marks = cols.map(() => '?').join(', ');
+    return { sql: 'EXISTS (SELECT ' + names + ' INTERSECT SELECT ' + marks + ')', params };
+  }
+  const conds = cols.map(c => nullSafeCond(c.name));
+  return { sql: conds.join(' AND '), params };
+}
+function buildUpdateSQL(colName, val, tr){
+  const t = qid(App.table), set = ' SET ' + qid(colName) + '=?';
+  if (App.editStrategy === 'rowid')
+    return { sql: 'UPDATE ' + t + set + ' WHERE rowid=?', params: [val, tr._rid] };
+  const c = buildEditConds(tr);
+  if (backendDialect() === 'mysql')
+    return { sql: 'UPDATE ' + t + set + ' WHERE ' + c.sql + ' LIMIT 1', params: [val].concat(c.params) };
+  if (backendDialect() === 'mssql')
+    return { sql: 'UPDATE TOP (1) ' + t + set + ' WHERE ' + c.sql, params: [val].concat(c.params) };
+  if (App.editStrategy === 'pk')
+    return { sql: 'UPDATE ' + t + set + ' WHERE ' + c.sql, params: [val].concat(c.params) };
+  const rid = backendDialect() === 'pg' ? 'ctid' : 'rowid';
+  return {
+    sql: 'UPDATE ' + t + set + ' WHERE ' + rid + ' IN (SELECT ' + rid + ' FROM ' + t + ' WHERE ' + c.sql + ' LIMIT 1)',
+    params: [val].concat(c.params),
+  };
+}
+function buildDeleteSQL(tr){
+  const t = qid(App.table);
+  if (App.editStrategy === 'rowid')
+    return { sql: 'DELETE FROM ' + t + ' WHERE rowid=?', params: [tr._rid] };
+  const c = buildEditConds(tr);
+  if (App.editStrategy === 'pk')
+    return { sql: 'DELETE FROM ' + t + ' WHERE ' + c.sql, params: c.params };
+  if (backendDialect() === 'mysql')
+    return { sql: 'DELETE FROM ' + t + ' WHERE ' + c.sql + ' LIMIT 1', params: c.params };
+  if (backendDialect() === 'mssql')
+    return { sql: 'DELETE TOP (1) FROM ' + t + ' WHERE ' + c.sql, params: c.params };
+  const rid = backendDialect() === 'pg' ? 'ctid' : 'rowid';
+  return {
+    sql: 'DELETE FROM ' + t + ' WHERE ' + rid + ' IN (SELECT ' + rid + ' FROM ' + t + ' WHERE ' + c.sql + ' LIMIT 1)',
+    params: c.params,
+  };
+}
+async function applyUpdate(colName, val, tr){
+  const { sql, params } = buildUpdateSQL(colName, val, tr);
+  if (App.mode === 'local'){
+    App.db.run(sql, params);
+    const n = App.db.getRowsModified();
+    if (n === 0) throw new Error('未找到该行，数据可能已变化');
+    App.dirty += n;
+    updateStatus();
+    toast('已更新 · 未保存更改 ' + App.dirty + '（Ctrl+S 导出）', 'ok');
+  } else {
+    await api('POST', '/api/query', { conn: App.connId, sql, params });
+    toast('已写入数据库', 'ok');
+  }
+}
+
+/* ============ 插入 / 删除行 ============ */
+function openModal(title, bodyNode, buttons){
+  const root = $('modal-root');
+  root.innerHTML = '';
+  root.classList.add('open');
+  const panel = document.createElement('div');
+  panel.className = 'modal panel ties';
+  const head = document.createElement('div');
+  head.className = 'modal-head';
+  const h = document.createElement('h3'); h.textContent = title;
+  const x = document.createElement('button'); x.className = 'btn sm'; x.textContent = '✕';
+  head.appendChild(h); head.appendChild(x);
+  const body = document.createElement('div');
+  body.className = 'modal-body';
+  body.appendChild(bodyNode);
+  const foot = document.createElement('div');
+  foot.className = 'modal-foot';
+  const close = () => { root.classList.remove('open'); root.innerHTML = ''; };
+  buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'btn ' + (b.cls || '');
+    btn.textContent = b.label;
+    btn.addEventListener('click', async () => {
+      let ok = true;
+      if (b.onClick) ok = (await b.onClick(close)) !== false;
+      if (ok !== false) close();
+    });
+    foot.appendChild(btn);
+  });
+  x.addEventListener('click', close);
+  root.addEventListener('click', e => { if (e.target === root) close(); }, { once: true });
+  panel.appendChild(head); panel.appendChild(body); panel.appendChild(foot);
+  root.appendChild(panel);
+}
+function openAddModal(){
+  if (!App.table) return;
+  if (!canEdit()){ toast('该表只读（无 rowid / 无单列主键），请用 SQL 编辑', 'err'); return; }
+  const form = document.createElement('div');
+  const hint = document.createElement('p');
+  hint.className = 'hint'; hint.textContent = '留空 = NULL；纯数字自动按数字写入。';
+  form.appendChild(hint);
+  App.columns.forEach(c => {
+    const lab = document.createElement('label');
+    lab.className = 'fld';
+    lab.textContent = c.name + (c.type ? ' · ' + c.type : '') + (c.pk ? ' · PK' : '') + (c.notnull ? ' · NOT NULL' : '');
+    const inp = document.createElement('input');
+    inp.dataset.col = c.name;
+    inp.placeholder = 'NULL';
+    lab.appendChild(inp);
+    form.appendChild(lab);
+  });
+  openModal('插入新行 · ' + App.table, form, [
+    { label: '取消' },
+    { label: '插入', cls: 'primary', onClick: async () => {
+      const vals = {};
+      form.querySelectorAll('input').forEach(i => { vals[i.dataset.col] = coerce(i.value); });
+      const names = App.columns.map(c => qid(c.name)).join(', ');
+      const ph = App.columns.map(() => '?').join(', ');
+      const sql = 'INSERT INTO ' + qid(App.table) + ' (' + names + ') VALUES (' + ph + ')';
+      const params = App.columns.map(c => vals[c.name]);
+      try {
+        if (App.mode === 'local'){
+          App.db.run(sql, params);
+          App.dirty += App.db.getRowsModified();
+          updateStatus();
+        } else {
+          await api('POST', '/api/query', { conn: App.connId, sql, params });
+        }
+        toast('已插入 1 行', 'ok');
+        App.page = Math.floor((App.total + 1) / App.pageSize);
+        await loadPage();
+      } catch (e){ toast(e.message || String(e), 'err'); return false; }
+    }},
+  ]);
+}
+function confirmDeleteRow(){
+  if (!App.table || !App.selectedTr){ toast('先在表格中点击选中一行', 'err'); return; }
+  const p = document.createElement('p');
+  p.textContent = '删除选中的一行？此操作' + (App.mode === 'local' ? '仅作用于内存副本，导出后生效。' : '会直接写入数据库，不可撤销。')
+    + (App.editStrategy === 'allcols' ? '（无主键表：按整行匹配删除第一行）' : '');
+  openModal('删除行 · ' + App.table, p, [
+    { label: '取消' },
+    { label: '删除', cls: 'danger', onClick: async () => {
+      try {
+        const { sql, params } = buildDeleteSQL(App.selectedTr);
+        if (App.mode === 'local'){
+          App.db.run(sql, params);
+          App.dirty += App.db.getRowsModified();
+          updateStatus();
+        } else {
+          await api('POST', '/api/query', { conn: App.connId, sql, params });
+        }
+        toast('已删除 1 行', 'ok');
+        App.selectedTr = null;
+        await loadPage();
+      } catch (e){ toast(e.message || String(e), 'err'); return false; }
+    }},
+  ]);
+}
+
+/* ============ SQL 控制台 ============ */
+function pushHistory(sql){
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem('aidb.history') || '[]'); } catch (e){}
+  h = h.filter(x => x !== sql);
+  h.unshift(sql);
+  h = h.slice(0, 30);
+  try { localStorage.setItem('aidb.history', JSON.stringify(h)); } catch (e){}
+  renderHistory();
+}
+function renderHistory(){
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem('aidb.history') || '[]'); } catch (e){}
+  const sel = $('sql-history');
+  sel.innerHTML = '<option value="">历史…</option>';
+  h.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s;
+    o.textContent = s.length > 60 ? s.slice(0, 60) + '…' : s;
+    sel.appendChild(o);
+  });
+}
+/* 按分号切分 SQL（跳过字符串/反引号/注释内的分号） */
+function splitSql(sql){
+  const out = [];
+  let cur = '', state = 'normal';
+  for (let i = 0; i < sql.length; i++){
+    const c = sql[i], next = sql[i + 1] || '';
+    if (state === 'normal'){
+      if (c === "'" || c === '"' || c === '`'){ state = c; cur += c; }
+      else if (c === '-' && next === '-'){ state = 'line'; cur += c + next; i++; }
+      else if (c === '/' && next === '*'){ state = 'block'; cur += c + next; i++; }
+      else if (c === ';'){ out.push(cur); cur = ''; }
+      else cur += c;
+    } else if (state === 'line'){
+      cur += c;
+      if (c === '\n') state = 'normal';
+    } else if (state === 'block'){
+      cur += c;
+      if (c === '*' && next === '/'){ cur += next; i++; state = 'normal'; }
+    } else {
+      cur += c;
+      if (c === state){
+        if (next === state){ cur += next; i++; }
+        else state = 'normal';
+      }
+    }
+  }
+  out.push(cur);
+  return out.map(s => s.trim()).filter(s => s.length);
+}
+/* ============ 危险操作检测 ============ */
+function stripStringsAndComments(sql){
+  let out = '', state = 'normal';
+  for (let i = 0; i < sql.length; i++){
+    const c = sql[i], next = sql[i + 1] || '';
+    if (state === 'normal'){
+      if (c === "'" || c === '"' || c === '`'){ state = c; out += ' '; continue; }
+      if (c === '-' && next === '-'){ state = 'line'; i++; continue; }
+      if (c === '/' && next === '*'){ state = 'block'; i++; continue; }
+      out += c;
+    } else if (state === 'line'){
+      if (c === '\n'){ state = 'normal'; out += ' '; }
+    } else if (state === 'block'){
+      if (c === '*' && next === '/'){ state = 'normal'; i++; }
+    } else {
+      if (c === state) state = 'normal';
+    }
+  }
+  return out;
+}
+function classifyDanger(stmt){
+  let s = stmt.replace(/^\s+/, '');
+  for (;;){
+    const line = s.match(/^--[^\n]*\n?/);
+    if (line){ s = s.slice(line[0].length).replace(/^\s+/, ''); continue; }
+    const block = s.match(/^\/\*[\s\S]*?\*\//);
+    if (block){ s = s.slice(block[0].length).replace(/^\s+/, ''); continue; }
+    break;
+  }
+  let m;
+  if ((m = s.match(/^DROP\s+(DATABASE|SCHEMA)\b/i)))
+    return { level: 'worst', label: '删除数据库/模式（DROP ' + m[1].toUpperCase() + '）' };
+  if ((m = s.match(/^TRUNCATE\b/i)))
+    return { level: 'worst', label: '清空整表（TRUNCATE）' };
+  if ((m = s.match(/^DROP\s+TABLE\b/i)))
+    return { level: 'worst', label: '删除整表（DROP TABLE）' };
+  if ((m = s.match(/^DROP\b/i)))
+    return { level: 'high', label: '删除数据库对象（DROP ' + m[0].trim().toUpperCase() + '）' };
+  if ((m = s.match(/^ALTER\s+TABLE\b/i)))
+    return { level: 'high', label: '修改表结构（ALTER TABLE）' };
+  const bare = stripStringsAndComments(s);
+  if (/^(DELETE|UPDATE)\b/i.test(s) || (/^WITH\b/i.test(bare) && /\b(DELETE|UPDATE)\b/i.test(bare))){
+    if (!/\bWHERE\b/i.test(bare))
+      return { level: 'worst', label: (s.match(/^(DELETE)\b/i) ? 'DELETE' : 'UPDATE') + ' 无 WHERE —— 影响全表所有行' };
+  }
+  return null;
+}
+function dangerGateOn(){ return $('danger-gate').checked; }
+function openDangerConfirm(sql, dangers){
+  const box = document.createElement('div');
+  const hasWorst = dangers.some(d => d.level === 'worst');
+  const p = document.createElement('p');
+  p.className = 'danger-warn';
+  p.textContent = '检测到 ' + dangers.length + ' 条危险语句，将直接作用于当前'
+    + (App.mode === 'local' ? '内存副本' : '已连接的数据库（不可撤销）') + '：';
+  box.appendChild(p);
+  dangers.forEach(d => {
+    const item = document.createElement('div');
+    item.className = 'danger-item';
+    const tag = document.createElement('span');
+    tag.className = 'danger-tag';
+    tag.textContent = '第 ' + d.no + ' 条 · ' + d.label;
+    const code = document.createElement('code');
+    code.textContent = d.text.length > 300 ? d.text.slice(0, 300) + ' …' : d.text;
+    item.appendChild(tag);
+    item.appendChild(code);
+    box.appendChild(item);
+  });
+  let inp = null;
+  if (hasWorst){
+    const row = document.createElement('div');
+    row.className = 'danger-input-row';
+    const lab = document.createElement('label');
+    lab.className = 'fld';
+    lab.textContent = '输入 YES 以解锁执行按钮';
+    inp = document.createElement('input');
+    inp.placeholder = 'YES';
+    inp.autocomplete = 'off';
+    lab.appendChild(inp);
+    row.appendChild(lab);
+    box.appendChild(row);
+  }
+  openModal('⚠ 危险操作确认', box, [
+    { label: '取消' },
+    { label: '仍然执行', cls: 'danger', onClick: () => { executeSQL(sql); } },
+  ]);
+  if (inp){
+    const btns = document.querySelectorAll('.modal-foot .btn');
+    const runBtn = btns[btns.length - 1];
+    runBtn.disabled = true;
+    inp.addEventListener('input', () => { runBtn.disabled = inp.value.trim().toUpperCase() !== 'YES'; });
+  }
+}
+function runSQL(){
+  const sql = $('sql-input').value.trim();
+  if (!sql){ toast('先输入 SQL', 'err'); return; }
+  if (dangerGateOn()){
+    const list = splitSql(sql);
+    const dangers = [];
+    list.forEach((st, i) => {
+      const d = classifyDanger(st);
+      if (d) dangers.push({ no: i + 1, text: st, level: d.level, label: d.label });
+    });
+    if (dangers.length){ openDangerConfirm(sql, dangers); return; }
+  }
+  executeSQL(sql);
+}
+async function executeSQL(sql){
+  pushHistory(sql);
+  const t0 = performance.now();
+  const out = $('sql-results');
+  let stmtNo = 0;
+  try {
+    let sets = [], note = '', notes = [];
+    if (App.mode === 'local'){
+      if (!App.db) throw new Error('未打开数据库');
+      const results = App.db.exec(sql);
+      const modified = App.db.getRowsModified();
+      sets = results.map(r => ({ columns: r.columns, rows: r.rows }));
+      if (!sets.length) note = '执行成功 · 影响 ' + modified + ' 行';
+      if (modified > 0){ App.dirty += modified; updateStatus(); }
+    } else {
+      if (!App.connId) throw new Error('未连接服务器数据库（SQL 页作用于当前连接）');
+      const stmts = splitSql(sql);
+      for (let i = 0; i < stmts.length; i++){
+        stmtNo = i + 1;
+        const r = await api('POST', '/api/query', { conn: App.connId, sql: stmts[i] });
+        if (r.columns && r.columns.length) sets.push({ columns: r.columns, rows: r.rows, truncated: r.truncated });
+        else if (stmts.length > 1) notes.push('第 ' + (i + 1) + ' 条：影响 ' + (r.rowcount || 0) + ' 行');
+        else note = '执行成功 · 影响 ' + (r.rowcount || 0) + ' 行';
+      }
+      if (notes.length) note = notes.join(' · ');
+    }
+    const ms = Math.round(performance.now() - t0);
+    $('sql-status').textContent = ms + ' ms';
+    out.innerHTML = '';
+    if (note){
+      const m = document.createElement('div'); m.className = 'sql-msg'; m.textContent = note; out.appendChild(m);
+    }
+    sets.forEach((s, i) => {
+      const cap = document.createElement('div');
+      cap.className = 'rset-cap';
+      cap.textContent = (sets.length > 1 ? '结果集 ' + (i + 1) + ' · ' : '') + s.rows.length + ' 行';
+      out.appendChild(cap);
+      const wrap = document.createElement('div'); wrap.className = 'rtable-wrap';
+      const tbl = document.createElement('table'); tbl.className = 'rtable';
+      const thead = document.createElement('thead'); const hr = document.createElement('tr');
+      s.columns.forEach(c => { const th = document.createElement('th'); th.textContent = c; hr.appendChild(th); });
+      thead.appendChild(hr); tbl.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      const shown = s.rows.slice(0, 500);
+      shown.forEach(r => {
+        const tr = document.createElement('tr');
+        r.forEach(v => {
+          const td = document.createElement('td');
+          const txt = cellText(v);
+          td.textContent = txt === null ? '∅' : txt;
+          if (txt === null) td.style.cssText = 'color:rgba(60,58,54,.4);font-style:italic';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      wrap.appendChild(tbl);
+      out.appendChild(wrap);
+      if (s.rows.length > 500 || s.truncated){
+        const tn = document.createElement('div');
+        tn.className = 'trunc';
+        tn.textContent = '（仅显示前 500 行，共 ' + s.rows.length + '+ 行）';
+        out.appendChild(tn);
+      }
+    });
+    if (!sets.length && !note){
+      const m = document.createElement('div'); m.className = 'sql-msg'; m.textContent = '执行成功'; out.appendChild(m);
+    }
+    refreshTables();
+  } catch (e){
+    const ms = Math.round(performance.now() - t0);
+    $('sql-status').textContent = ms + ' ms · 出错';
+    out.innerHTML = '';
+    const m = document.createElement('div');
+    m.className = 'sql-msg err';
+    m.textContent = '✕ ' + (stmtNo > 1 ? '第 ' + stmtNo + ' 条语句：' : '') + (e.message || String(e));
+    out.appendChild(m);
+  }
+}
+
+/* ============ 结构视图 ============ */
+function renderSchema(){
+  const body = $('schema-body');
+  body.innerHTML = '';
+  if (!App.table || !App.columns.length){ $('schema-empty').hidden = false; return; }
+  $('schema-empty').hidden = true;
+  const cap = document.createElement('div');
+  cap.className = 'rset-cap';
+  cap.textContent = App.table + ' · ' + App.columns.length + ' 列' + (App.tableType === 'view' ? ' · 视图（只读）' : '');
+  body.appendChild(cap);
+  const tbl = document.createElement('table');
+  tbl.className = 'rtable';
+  const thead = document.createElement('thead'); const hr = document.createElement('tr');
+  ['列名', '类型', '非空', '主键'].forEach(x => { const th = document.createElement('th'); th.textContent = x; hr.appendChild(th); });
+  thead.appendChild(hr); tbl.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  App.columns.forEach(c => {
+    const tr = document.createElement('tr');
+    [c.name, c.type || '—', c.notnull ? '✓' : '', c.pk ? '✓' : ''].forEach(v => {
+      const td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  body.appendChild(tbl);
+  if (App.mode === 'local'){
+    try {
+      const r = q('SELECT sql FROM sqlite_master WHERE name = ?', [App.table]);
+      if (r.rows[0] && r.rows[0][0]){
+        const h = document.createElement('h3'); h.textContent = '建表语句 DDL';
+        const pre = document.createElement('pre'); pre.className = 'ddl';
+        pre.textContent = r.rows[0][0];
+        body.appendChild(h); body.appendChild(pre);
+      }
+    } catch (e){}
+  }
+}
+
+/* ============ 导出 ============ */
+function exportDb(){
+  if (App.mode !== 'local'){ toast('服务器模式的数据在数据库端，无需导出', 'info'); return; }
+  if (!App.db) return;
+  const data = App.db.export();
+  downloadBlob(new Blob([data], { type: 'application/octet-stream' }), stem(App.dbName) + '-edited.db');
+  App.dirty = 0;
+  updateStatus();
+  toast('已导出 ' + stem(App.dbName) + '-edited.db', 'ok');
+}
+async function exportCsv(){
+  if (!App.table) return;
+  const MAX = 200000;
+  let columns, rows;
+  try {
+    if (App.mode === 'local'){
+      let sel = 'SELECT ' + (App.rowid ? 'rowid AS __rid__, ' : '') + '* FROM ' + qid(App.table);
+      if (App.where) sel += ' WHERE ' + App.where;
+      if (App.sort) sel += ' ORDER BY ' + qid(App.sort.col) + ' ' + App.sort.dir;
+      sel += ' LIMIT ?';
+      const r = q(sel, [MAX]);
+      columns = App.columns.map(x => x.name);
+      rows = App.rowid ? r.rows.map(x => x.slice(1)) : r.rows;
+    } else {
+      const p = new URLSearchParams({ conn: App.connId, table: App.table, limit: MAX, offset: 0 });
+      if (App.where) p.set('where', App.where);
+      if (App.sort){ p.set('sort', App.sort.col); p.set('dir', App.sort.dir); }
+      const r = await api('GET', '/api/rows?' + p);
+      columns = r.columns; rows = r.rows;
+    }
+  } catch (e){ toast(e.message, 'err'); return; }
+  const escCell = v => {
+    if (v === null || v === undefined) return '';
+    let s = v instanceof Uint8Array ? '<blob>' : String(v);
+    if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const lines = [columns.map(escCell).join(',')];
+  rows.forEach(r => lines.push(r.map(escCell).join(',')));
+  downloadBlob(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), stem(App.table) + '.csv');
+  toast('已导出 ' + rows.length + ' 行 → ' + stem(App.table) + '.csv', 'ok');
+}
+
+/* ============ UI 状态 ============ */
+function renderEmpty(msg){
+  $('grid-wrap').hidden = true;
+  $('empty-state').hidden = false;
+  $('empty-msg').textContent = msg || '';
+}
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  $('view-data').hidden = t !== 'data';
+  $('view-schema').hidden = t !== 'schema';
+  $('view-sql').hidden = t !== 'sql';
+  if (t === 'schema') renderSchema();
+}
+function updateToolbar(){
+  const tb = $('table-toolbar');
+  tb.hidden = !App.table;
+  if (App.table){
+    $('cur-table').textContent = App.table + (App.tableType === 'view' ? ' · 视图' : '')
+      + (App.editStrategy === 'allcols' ? ' （无主键 · 按整行匹配）' : '');
+    $('cur-table').title = App.editStrategy === 'allcols'
+      ? '该表没有主键：编辑/删除按整行 NULL 安全匹配，只命中第一行' : '';
+    const maxPage = Math.max(1, Math.ceil(App.total / App.pageSize));
+    $('page-label').textContent = (App.page + 1) + ' / ' + maxPage + ' 页 · ' + App.total + ' 行';
+    $('btn-prev').disabled = App.page <= 0;
+    $('btn-next').disabled = App.page >= maxPage - 1;
+    $('btn-add-row').disabled = !canEdit();
+    $('btn-del-row').disabled = !canEdit() || !App.selectedTr;
+  }
+  $('btn-export-csv').disabled = !App.table;
+}
+function updateStatus(){
+  let src = '未连接';
+  if (App.mode === 'local') src = '本地 SQLITE · ' + App.dbName;
+  else if (App.mode === 'server') src = '服务器 ' + App.dialect.toUpperCase() + ' · ' + App.serverBase;
+  $('st-left').textContent = src;
+  const mid = $('st-mid');
+  if (App.dirty > 0){ mid.textContent = '● 未保存更改 ' + App.dirty + ' — Ctrl+S 导出 .db'; mid.className = 'warn'; }
+  else if (App.mode === 'local'){ mid.textContent = '内存副本 · 导出前不落盘'; mid.className = ''; }
+  else { mid.textContent = App.mode === 'server' ? '改动直接写入数据库' : ''; mid.className = ''; }
+  $('st-right').textContent = 'ENGINE ' + (App.SQL ? 'READY' : 'LOADING') + ' · SERVER ' + (App.serverOk ? 'ONLINE' : 'OFFLINE');
+  $('btn-export-db').disabled = App.mode !== 'local';
+  $('btn-export-csv').disabled = !App.table;
+}
+
+/* ============ 事件绑定与启动 ============ */
+function bindEvents(){
+  $('btn-open-file').addEventListener('click', () => $('file-input').click());
+  $('file-input').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) openLocalFile(f);
+    e.target.value = '';
+  });
+  $('btn-new-db').addEventListener('click', newLocalDb);
+  $('btn-load-demo').addEventListener('click', loadDemoDb);
+  $('btn-export-db').addEventListener('click', exportDb);
+  $('btn-export-csv').addEventListener('click', exportCsv);
+  $('srv-ping').addEventListener('click', pingServer);
+  $('srv-connect').addEventListener('click', connectServer);
+  $('srv-disconnect').addEventListener('click', disconnectServer);
+  $('srv-type').addEventListener('change', () => {
+    const t = $('srv-type').value;
+    $('srv-fields-sqlite').hidden = t !== 'sqlite';
+    $('srv-fields-net').hidden = t === 'sqlite';
+    if (t === 'mysql') $('srv-port').value = '3306';
+    if (t === 'postgres') $('srv-port').value = '5432';
+    if (t === 'mssql') $('srv-port').value = '1433';
+    $('srv-user').placeholder = t === 'postgres' ? 'postgres' : t === 'mssql' ? 'sa' : 'root';
+  });
+  document.querySelectorAll('.tab').forEach(b =>
+    b.addEventListener('click', () => showTab(b.dataset.tab)));
+  $('where-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){
+      App.where = e.target.value.trim();
+      App.page = 0;
+      loadPage();
+    }
+  });
+  $('page-size').addEventListener('change', e => {
+    App.pageSize = parseInt(e.target.value, 10) || 50;
+    App.page = 0;
+    loadPage();
+  });
+  $('btn-prev').addEventListener('click', () => { if (App.page > 0){ App.page--; loadPage(); } });
+  $('btn-next').addEventListener('click', () => { App.page++; loadPage(); });
+  $('btn-add-row').addEventListener('click', openAddModal);
+  $('btn-del-row').addEventListener('click', confirmDeleteRow);
+  $('btn-run').addEventListener('click', runSQL);
+  $('sql-input').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); runSQL(); }
+  });
+  $('danger-gate').addEventListener('change', e => {
+    try { localStorage.setItem('aidb.gate', e.target.checked ? '1' : '0'); } catch (err){}
+  });
+  $('sql-history').addEventListener('change', e => {
+    if (e.target.value){ $('sql-input').value = e.target.value; e.target.value = ''; }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && $('modal-root').classList.contains('open')){
+      $('modal-root').classList.remove('open'); $('modal-root').innerHTML = '';
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+      e.preventDefault();
+      if (App.mode === 'local') exportDb();
+      else toast('服务器模式直接写库，无需导出', 'info');
+    }
+  });
+  let dragDepth = 0;
+  window.addEventListener('dragenter', e => {
+    e.preventDefault();
+    if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')){
+      dragDepth++;
+      $('drop-overlay').classList.add('on');
+    }
+  });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('dragleave', e => {
+    e.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) $('drop-overlay').classList.remove('on');
+  });
+  window.addEventListener('drop', e => {
+    e.preventDefault();
+    dragDepth = 0;
+    $('drop-overlay').classList.remove('on');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) openLocalFile(f);
+  });
+  window.addEventListener('beforeunload', e => {
+    if (App.dirty > 0){ e.preventDefault(); e.returnValue = ''; }
+  });
+}
+async function boot(){
+  bindEvents();
+  renderHistory();
+  const http = location.protocol === 'http:' || location.protocol === 'https:';
+  if (http) $('srv-base').value = location.origin;
+  restoreSrvForm();
+  try { $('danger-gate').checked = (localStorage.getItem('aidb.gate') || '1') === '1'; } catch (e){}
+  updateStatus();
+  ensureEngine().then(updateStatus).catch(e => toast('SQL 引擎加载失败：' + e.message, 'err'));
+  pingServer();
+  tryResume();
+  renderEmpty('未连接数据库');
+}
+boot();
+</script>
+</body>
+</html>
